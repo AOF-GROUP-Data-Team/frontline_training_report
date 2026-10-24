@@ -1,0 +1,4 @@
+requests>=2.31
+pandas>=2.0
+playwright>=1.44
+Pillow>=10.0
