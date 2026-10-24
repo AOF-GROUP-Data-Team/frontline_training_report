@@ -1,0 +1,64 @@
+name: Frontline Training Report (1755809)
+
+on:
+  workflow_dispatch:
+    inputs:
+      report_start:
+        description: "Start date YYYY-MM-DD (blank = yesterday)"
+        required: false
+        default: ""
+      report_end:
+        description: "End date YYYY-MM-DD (blank = yesterday)"
+        required: false
+        default: ""
+      send_email:
+        description: "Send the email"
+        required: false
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+
+concurrency:
+  group: frontline-training
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run report
+        env:
+          TZ: Asia/Riyadh
+          ZENPUT_API_KEY: ${{ secrets.ZENPUT_API_KEY }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          REPORT_START: ${{ github.event.inputs.report_start }}
+          REPORT_END: ${{ github.event.inputs.report_end }}
+          SEND_EMAIL: ${{ github.event.inputs.send_email || 'true' }}
+          INCLUDE_PHOTOS: "true"
+        run: python frontline_training_1755809.py
+
+      - name: Upload report files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontline-training-report
+          path: |
+            frontline_training_*.pdf
+            frontline_training_*.html
+          if-no-files-found: ignore
+          retention-days: 14
